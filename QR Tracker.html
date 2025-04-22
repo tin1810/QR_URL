@@ -1,25 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QR Scanner Redirect</title>
-  <script type="text/javascript">
-    function redirectToSession() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const sessionId = urlParams.get('sessionId');
-      if (sessionId) {
-        window.location.href = `flutterapp://qr-scan?sessionId=${sessionId}`; // Flutter app deep link scheme
-      } else {
-        alert("No sessionId found");
-      }
-    }
-    
-    window.onload = redirectToSession;
-  </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scan Complete</title>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+        
+        .success-icon {
+            font-size: 72px;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        
+        p {
+            color: #7f8c8d;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        
+        .qr-id {
+            background-color: #f0f4f8;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 20px 0;
+        }
+        
+        .timestamp {
+            font-size: 14px;
+            color: #95a5a6;
+            margin-top: 25px;
+        }
+        
+        .app-redirect {
+            margin-top: 30px;
+            padding: 12px;
+            background-color: #e8f5e9;
+            border-radius: 8px;
+            color: #2e7d32;
+        }
+    </style>
 </head>
 <body>
-  <h1>Redirecting...</h1>
-  <p>If you are not redirected, <a href="javascript:redirectToSession()">click here</a>.</p>
+    <div class="container">
+        <div class="success-icon">✓</div>
+        <h1>Scan Successful!</h1>
+        <p>The QR code has been successfully scanned and recorded.</p>
+        
+        <div class="qr-id" id="qrIdDisplay">Loading ID...</div>
+        
+        <div class="timestamp" id="timestamp">
+            Scanned at: <span id="timeDisplay">just now</span>
+        </div>
+        
+        <div class="app-redirect" id="appRedirect">
+            Redirecting back to app...
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration (replace with your actual config)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDzdTLZuYALOhODaBYxZh6-ODDDdODulF4",
+            projectId: "qr-tracker-test-210f9",
+            storageBucket: "qr-tracker-test-210f9.firebasestorage.app",
+  
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const qrId = urlParams.get('id');
+            
+            if (!qrId) {
+                document.getElementById('qrIdDisplay').textContent = 'No QR ID found';
+                return;
+            }
+
+            // Display the QR ID
+            document.getElementById('qrIdDisplay').textContent = qrId;
+            
+            // Record the scan time
+            const scanTime = new Date();
+            document.getElementById('timeDisplay').textContent = scanTime.toLocaleString();
+            
+            // Update Firebase
+            firebase.database().ref('qrcodes/' + qrId).update({
+                scanned: true,
+                scannedAt: firebase.database.ServerValue.TIMESTAMP,
+                scannedBy: 'web_user_' + navigator.userAgent.substring(0, 30)
+            }).then(() => {
+                // Try to redirect to app
+                setTimeout(() => {
+                    window.location.href = `yourapp://qr_scanned?id=${qrId}`;
+                }, 1500);
+                
+                // If still here after 5 seconds, show different message
+                setTimeout(() => {
+                    document.getElementById('appRedirect').innerHTML = 
+                        'You may now close this window or <a href="#" onclick="window.close()">click here</a> to close.';
+                }, 5000);
+            }).catch(error => {
+                document.getElementById('appRedirect').textContent = 
+                    'Error recording scan: ' + error.message;
+            });
+        });
+    </script>
 </body>
 </html>
